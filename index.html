@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="description" content="Chinese language flashcard app with English translations" />
+  <title>中文 Flashcards</title>
+
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+</head>
+<body>
+
+<h1>中文 Flashcards</h1>
+<p class="subtitle">Click a card to reveal the translation</p>
+
+<div class="categories" id="categories"></div>
+
+<div class="progress-bar-wrap">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+<div class="counter" id="counter"></div>
+
+<div class="scene" id="scene" onclick="flipCard()">
+  <div class="card" id="card">
+    <div class="face front">
+      <div class="hint">English</div>
+      <div class="english-word" id="frontWord"></div>
+      <div class="category-tag" id="frontCat"></div>
+    </div>
+    <div class="face back">
+      <div class="hint">Chinese</div>
+      <div class="chinese-chars" id="backChars"></div>
+      <div class="pinyin" id="backPinyin"></div>
+      <div class="english-label" id="backEnglish"></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn btn-nav" id="btnPrev" onclick="navigate(-1)">&#8592;</button>
+  <button class="btn btn-flip" onclick="flipCard()">Flip</button>
+  <button class="btn btn-nav" id="btnNext" onclick="navigate(1)">&#8594;</button>
+</div>
+
+<div class="feedback-btns" id="feedbackBtns" style="display:none;">
+  <button class="btn btn-unknown" onclick="markCard(false)">&#x2715; Still learning</button>
+  <button class="btn btn-known" onclick="markCard(true)">&#x2713; Got it!</button>
+</div>
+
+<button class="btn btn-shuffle" onclick="shuffle()">&#x21C4; Shuffle Deck</button>
+
+<div class="stats">
+  <span>Total: <strong id="statTotal">0</strong></span>
+  <span class="stat-known">Known: <strong id="statKnown">0</strong></span>
+  <span class="stat-unknown">Learning: <strong id="statUnknown">0</strong></span>
+</div>
+
+<button class="import-toggle" onclick="toggleImport()">+ Add Vocabulary</button>
+
+<div class="import-panel" id="importPanel">
+  <div class="import-row">
+    <div>
+      <label>Category name</label>
+      <input class="import-input" id="importCat" type="text" placeholder="e.g. Cooking" />
+    </div>
+  </div>
+
+  <div>
+    <label>Paste vocabulary — one word per line</label>
+    <textarea class="import-textarea" id="importText"
+      placeholder="Chinese（pinyin）&#9;English&#10;&#10;e.g.&#10;烹饪（pēng rèn）&#9;cooking, culinary&#10;炒（chǎo）&#9;to stir-fry"></textarea>
+  </div>
+
+  <div class="import-format">
+    Accepted formats (tab or space between columns):<br/>
+    <code>汉字（pīnyīn）&nbsp;&nbsp;English</code><br/>
+    <code>汉字&nbsp;&nbsp;pīnyīn&nbsp;&nbsp;English</code>
+  </div>
+
+  <div class="import-actions">
+    <button class="btn btn-import" onclick="importCards()">Import Cards</button>
+    <button class="btn btn-clear-import" onclick="clearImportField()">Clear</button>
+  </div>
+  <div class="import-feedback" id="importFeedback"></div>
+</div>
+
+<script src="js/cards.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
