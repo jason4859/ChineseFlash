@@ -58,8 +58,14 @@
   <span class="stat-unknown">Learning: <strong id="statUnknown">0</strong></span>
 </div>
 
-<button class="import-toggle" onclick="toggleImport()">+ Add Vocabulary</button>
+<!-- Import toolbar -->
+<div class="import-toolbar">
+  <button class="import-toggle" onclick="toggleImport('manual')">+ Add Vocabulary</button>
+  <button class="import-toggle yt-toggle" onclick="toggleImport('youtube')">▶ Import from YouTube</button>
+  <button class="import-toggle hsk-toggle" onclick="toggleImport('hsk')">📚 HSK Levels</button>
+</div>
 
+<!-- Manual import panel -->
 <div class="import-panel" id="importPanel">
   <div class="import-row">
     <div>
@@ -67,27 +73,96 @@
       <input class="import-input" id="importCat" type="text" placeholder="e.g. Cooking" />
     </div>
   </div>
-
   <div>
     <label>Paste vocabulary — one word per line</label>
     <textarea class="import-textarea" id="importText"
       placeholder="Chinese（pinyin）&#9;English&#10;&#10;e.g.&#10;烹饪（pēng rèn）&#9;cooking, culinary&#10;炒（chǎo）&#9;to stir-fry"></textarea>
   </div>
-
   <div class="import-format">
-    Accepted formats (tab or space between columns):<br/>
+    Accepted formats (tab between columns):<br/>
     <code>汉字（pīnyīn）&nbsp;&nbsp;English</code><br/>
     <code>汉字&nbsp;&nbsp;pīnyīn&nbsp;&nbsp;English</code>
   </div>
-
   <div class="import-actions">
-    <button class="btn btn-import" onclick="importCards()">Import Cards</button>
+    <button class="btn btn-import" onclick="importCards(false)">Import Cards</button>
+    <button class="btn btn-hsk-group" onclick="importCards(true)" title="HSK words get an 'HSK X' category; others use the category name above">Group by HSK Level</button>
     <button class="btn btn-clear-import" onclick="clearImportField()">Clear</button>
   </div>
   <div class="import-feedback" id="importFeedback"></div>
 </div>
 
+<!-- YouTube import panel -->
+<div class="import-panel yt-panel" id="ytPanel">
+  <div class="yt-header">
+    <span class="yt-icon">▶</span>
+    <span>Extract vocabulary from a YouTube video</span>
+  </div>
+
+  <div>
+    <label>YouTube URL</label>
+    <input class="import-input" id="ytUrl" type="url"
+      placeholder="https://www.youtube.com/watch?v=..." />
+  </div>
+
+  <div class="import-row">
+    <div>
+      <label>Category name <span class="label-hint">(auto-filled from video title)</span></label>
+      <input class="import-input" id="ytCat" type="text" placeholder="Auto-detected..." />
+    </div>
+    <div style="max-width:110px;">
+      <label>Max words</label>
+      <input class="import-input" id="ytMaxWords" type="number" value="20" min="5" max="50" />
+    </div>
+  </div>
+
+  <button class="btn btn-yt-extract" id="btnYtExtract" onclick="extractFromYoutube()">
+    <span id="ytBtnText">Extract Vocabulary</span>
+  </button>
+
+  <!-- Preview table (shown after extraction) -->
+  <div id="ytPreview" style="display:none;">
+    <div class="yt-preview-header">
+      <span id="ytPreviewCount"></span>
+      <button class="btn btn-clear-import" onclick="clearYtPreview()">✕ Clear</button>
+    </div>
+    <div class="yt-preview-table" id="ytPreviewTable"></div>
+    <div class="import-actions">
+      <button class="btn btn-import" onclick="addYtCards(false)">+ Add All to Deck</button>
+      <button class="btn btn-hsk-group" onclick="addYtCards(true)" title="HSK words get an 'HSK X' category; others keep the video title">+ Group by HSK Level</button>
+    </div>
+  </div>
+
+  <div class="import-feedback" id="ytFeedback"></div>
+
+  <div class="import-format">
+    Requires the local API server to be running on port 8001.<br/>
+    Start it with: <code>python3 scripts/api_server.py</code><br/>
+    Set your key first: <code>export ANTHROPIC_API_KEY=your_key</code>
+  </div>
+</div>
+
+<!-- HSK browser panel -->
+<div class="import-panel hsk-panel" id="hskPanel">
+  <div class="hsk-header">
+    <span class="hsk-icon">📚</span>
+    <span>New HSK (2021) Vocabulary Browser</span>
+  </div>
+
+  <div class="hsk-level-tabs" id="hskLevelTabs"></div>
+
+  <div class="hsk-level-info" id="hskLevelInfo"></div>
+
+  <div class="yt-preview-table" id="hskWordTable" style="max-height:260px;"></div>
+
+  <button class="btn btn-hsk-add" id="btnHskAdd" onclick="addHskLevelToDeck()">
+    + Add HSK <span id="hskAddLabel">1</span> to Deck
+  </button>
+
+  <div class="import-feedback" id="hskFeedback"></div>
+</div>
+
 <script src="js/cards.js"></script>
+<script src="js/hsk.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

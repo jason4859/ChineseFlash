@@ -365,6 +365,191 @@ h1 {
 
 .import-feedback.error { color: #ef5350; }
 
+/* ── Import toolbar (side-by-side buttons) ─────────────────── */
+.import-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.import-toggle { margin-top: 0; }
+
+.yt-toggle {
+  border-color: #7a2020;
+  color: #e87070;
+}
+
+.yt-toggle:hover { border-color: #ef5350; color: #ef5350; }
+
+/* ── YouTube panel ─────────────────────────────────────────── */
+.yt-panel {
+  border-color: #7a2020;
+}
+
+.yt-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: #e87070;
+  font-weight: 600;
+}
+
+.yt-icon { font-size: 1rem; }
+
+.label-hint {
+  font-weight: 400;
+  color: #556;
+  font-size: 0.7rem;
+}
+
+.btn-yt-extract {
+  background: linear-gradient(135deg, #c0392b, #922b21);
+  color: #fff;
+  width: 100%;
+  font-size: 0.95rem;
+  position: relative;
+}
+
+.btn-yt-extract:hover { filter: brightness(1.15); }
+.btn-yt-extract:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+
+/* Loading spinner inside button */
+.btn-yt-extract.loading #ytBtnText::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Preview table */
+.yt-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: #7a9ad0;
+  margin-bottom: 8px;
+}
+
+.yt-preview-table {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #2a4a7f;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.yt-preview-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1.6fr auto;
+  gap: 8px;
+  padding: 7px 12px;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #1a2a4a;
+  align-items: center;
+}
+
+.yt-preview-row:last-child { border-bottom: none; }
+.yt-preview-row:nth-child(odd) { background: #0f1e3d; }
+
+.yt-zh { font-size: 1.1rem; color: #e8d5b7; }
+.yt-pinyin { color: #c8956c; font-style: italic; font-size: 0.78rem; }
+.yt-en { color: #aaa; }
+
+.hsk-badge {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.hsk-badge-1 { background: #1a3a5c; color: #7ab3e8; }
+.hsk-badge-2 { background: #1a3a2a; color: #7ae8a0; }
+.hsk-badge-3 { background: #3a2a10; color: #e8b87a; }
+.hsk-badge-4 { background: #2a1a3a; color: #c07ae8; }
+.hsk-badge-5 { background: #3a1a1a; color: #e87a7a; }
+.hsk-badge-6 { background: #1a2a2a; color: #7ae8e8; }
+.hsk-none    { font-size: 0.66rem; color: #444; }
+
+.btn-hsk-group {
+  background: linear-gradient(135deg, #2e7d32, #1b5e20);
+  color: #fff;
+  font-size: 0.82rem;
+  flex: 1;
+}
+
+/* ── HSK panel ─────────────────────────────────────────────── */
+.hsk-toggle {
+  border-color: #2a6644;
+  color: #5dcf93;
+}
+
+.hsk-toggle:hover { border-color: #4caf50; color: #4caf50; }
+
+.hsk-panel {
+  border-color: #2a6644;
+}
+
+.hsk-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: #5dcf93;
+  font-weight: 600;
+}
+
+.hsk-icon { font-size: 1rem; }
+
+.hsk-level-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hsk-tab {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid #2a6644;
+  background: #0f1e3d;
+  color: #5dcf93;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.hsk-tab:hover { border-color: #4caf50; color: #4caf50; }
+.hsk-tab.active { background: #2a6644; color: #fff; border-color: #4caf50; }
+
+.hsk-level-info {
+  font-size: 0.75rem;
+  color: #556;
+  min-height: 14px;
+}
+
+.btn-hsk-add {
+  background: linear-gradient(135deg, #2e7d32, #1b5e20);
+  color: #fff;
+  width: 100%;
+  font-size: 0.95rem;
+}
+
+.btn-hsk-add:hover { filter: brightness(1.15); }
+
 /* ── Responsive ────────────────────────────────────────────── */
 @media (max-width: 420px) {
   .english-word { font-size: 1.9rem; }

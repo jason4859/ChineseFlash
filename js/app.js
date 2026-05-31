@@ -160,8 +160,22 @@ document.addEventListener('keydown', e => {
 
 // ── Import panel ──────────────────────────────────────────────
 
-function toggleImport() {
-  document.getElementById('importPanel').classList.toggle('open');
+// ── Panel toggles ─────────────────────────────────────────────
+
+function toggleImport(panel) {
+  const manualEl = document.getElementById('importPanel');
+  const ytEl     = document.getElementById('ytPanel');
+  const hskEl    = document.getElementById('hskPanel');
+
+  const panels = { manual: manualEl, youtube: ytEl, hsk: hskEl };
+  const target  = panels[panel];
+  const isOpen  = target.classList.contains('open');
+
+  Object.values(panels).forEach(el => el.classList.remove('open'));
+  if (!isOpen) {
+    target.classList.add('open');
+    if (panel === 'hsk') initHskPanel();
+  }
 }
 
 function clearImportField() {
@@ -193,12 +207,12 @@ function parseLine(line) {
   return null;
 }
 
-function importCards() {
+function importCards(groupByHsk = false) {
   const fb  = document.getElementById('importFeedback');
   const raw = document.getElementById('importText').value;
   const cat = document.getElementById('importCat').value.trim();
 
-  if (!cat) {
+  if (!cat && !groupByHsk) {
     fb.className = 'import-feedback error';
     fb.textContent = 'Please enter a category name.';
     return;
@@ -211,8 +225,14 @@ function importCards() {
   lines.forEach((line, i) => {
     if (!line.trim()) return;
     const result = parseLine(line);
-    if (result) parsed.push({ ...result, cat });
-    else        skipped.push(i + 1);
+    if (result) {
+      const assignedCat = groupByHsk
+        ? (HSK_LOOKUP[result.zh] ? `HSK ${HSK_LOOKUP[result.zh]}` : (cat || 'Imported'))
+        : cat;
+      parsed.push({ ...result, cat: assignedCat });
+    } else {
+      skipped.push(i + 1);
+    }
   });
 
   if (!parsed.length) {
@@ -233,6 +253,81 @@ function importCards() {
   ALL_CARDS = [...ALL_CARDS, ...fresh];
   saveExtraCards();
 
+  const addedCat = fresh[0].cat;
+  activeCat = addedCat;
+  deck      = ALL_CARDS.filter(c => c.cat === addedCat);
+  index     = 0;
+  known.clear();
+  unknown.clear();
+  buildCategoryButtons();
+  showCard();
+
+  const cats    = [...new Set(fresh.map(c => c.cat))];
+  const catLabel = cats.length === 1 ? `"${cats[0]}"` : cats.map(c => `"${c}"`).join(', ');
+  const skipMsg  = skipped.length ? ` (${skipped.length} line${skipped.length > 1 ? 's' : ''} skipped)` : '';
+  fb.className   = 'import-feedback';
+  fb.textContent = `✓ Added ${fresh.length} card${fresh.length > 1 ? 's' : ''} to ${catLabel}${skipMsg}.`;
+  document.getElementById('importText').value = '';
+}
+
+// ── HSK browser ───────────────────────────────────────────────
+
+let activeHskLevel = 1;
+
+function initHskPanel() {
+  buildHskTabs();
+  renderHskLevel(activeHskLevel);
+}
+
+function buildHskTabs() {
+  const tabs = document.getElementById('hskLevelTabs');
+  tabs.innerHTML = '';
+  [1, 2, 3, 4, 5, 6].forEach(lvl => {
+    const btn = document.createElement('button');
+    btn.className = 'hsk-tab' + (lvl === activeHskLevel ? ' active' : '');
+    btn.textContent = `HSK ${lvl} (${(HSK_DATA[lvl] || []).length})`;
+    btn.onclick = () => { activeHskLevel = lvl; buildHskTabs(); renderHskLevel(lvl); };
+    tabs.appendChild(btn);
+  });
+}
+
+function renderHskLevel(lvl) {
+  const words = HSK_DATA[lvl] || [];
+  const table = document.getElementById('hskWordTable');
+  const info  = document.getElementById('hskLevelInfo');
+  const label = document.getElementById('hskAddLabel');
+
+  info.textContent = `${words.length} words at HSK level ${lvl}`;
+  label.textContent = lvl;
+
+  table.innerHTML = words.map(w => `
+    <div class="yt-preview-row">
+      <span class="yt-zh">${w.zh}</span>
+      <span class="yt-pinyin">${w.pinyin}</span>
+      <span class="yt-en">${w.en}</span>
+    </div>`).join('');
+}
+
+function addHskLevelToDeck() {
+  const fb    = document.getElementById('hskFeedback');
+  const lvl   = activeHskLevel;
+  const words = HSK_DATA[lvl] || [];
+  const cat   = `HSK ${lvl}`;
+
+  const existing = new Set(ALL_CARDS.map(c => c.zh + c.cat));
+  const fresh    = words
+    .map(w => ({ zh: w.zh, pinyin: w.pinyin, en: w.en, cat }))
+    .filter(c => !existing.has(c.zh + c.cat));
+
+  if (!fresh.length) {
+    fb.className   = 'import-feedback error';
+    fb.textContent = `All HSK ${lvl} words are already in your deck.`;
+    return;
+  }
+
+  ALL_CARDS = [...ALL_CARDS, ...fresh];
+  saveExtraCards();
+
   activeCat = cat;
   deck      = ALL_CARDS.filter(c => c.cat === cat);
   index     = 0;
@@ -241,12 +336,154 @@ function importCards() {
   buildCategoryButtons();
   showCard();
 
-  const skipMsg = skipped.length
-    ? ` (${skipped.length} line${skipped.length > 1 ? 's' : ''} skipped)`
-    : '';
-  fb.className  = 'import-feedback';
-  fb.textContent = `✓ Added ${fresh.length} card${fresh.length > 1 ? 's' : ''} to "${cat}"${skipMsg}.`;
-  document.getElementById('importText').value = '';
+  fb.className   = 'import-feedback';
+  fb.textContent = `✓ Added ${fresh.length} HSK ${lvl} word${fresh.length !== 1 ? 's' : ''} to your deck.`;
+}
+
+// ── YouTube import ────────────────────────────────────────────
+
+const API_URL = 'http://localhost:8001';
+let ytPendingCards = [];
+
+async function extractFromYoutube() {
+  const url      = document.getElementById('ytUrl').value.trim();
+  const maxWords = parseInt(document.getElementById('ytMaxWords').value) || 20;
+  const fb       = document.getElementById('ytFeedback');
+  const btn      = document.getElementById('btnYtExtract');
+
+  fb.className   = 'import-feedback';
+  fb.textContent = '';
+
+  if (!url) {
+    fb.className = 'import-feedback error';
+    fb.textContent = 'Please paste a YouTube URL.';
+    return;
+  }
+
+  // Check API server is up
+  try {
+    const health = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(3000) });
+    if (!health.ok) throw new Error();
+  } catch {
+    fb.className = 'import-feedback error';
+    fb.textContent = 'API server is not running. Start it with: python3 scripts/api_server.py';
+    return;
+  }
+
+  // Start loading state
+  btn.disabled = true;
+  btn.classList.add('loading');
+  document.getElementById('ytBtnText').textContent = 'Extracting…';
+  clearYtPreview();
+
+  try {
+    const res = await fetch(`${API_URL}/extract`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, max_words: maxWords }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || `Server error ${res.status}`);
+    }
+
+    // Auto-fill category from video title
+    const catInput = document.getElementById('ytCat');
+    if (!catInput.value.trim()) catInput.value = data.category;
+
+    ytPendingCards = data.cards.map(c => ({ ...c, cat: data.category }));
+    renderYtPreview(ytPendingCards, data.category);
+
+    fb.textContent = '';
+  } catch (err) {
+    fb.className   = 'import-feedback error';
+    fb.textContent = `Error: ${err.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    document.getElementById('ytBtnText').textContent = 'Extract Vocabulary';
+  }
+}
+
+function hskBadgeHtml(zh) {
+  const lvl = HSK_LOOKUP[zh];
+  return lvl
+    ? `<span class="hsk-badge hsk-badge-${lvl}">HSK ${lvl}</span>`
+    : `<span class="hsk-none">—</span>`;
+}
+
+function renderYtPreview(cards, defaultCat) {
+  const preview = document.getElementById('ytPreview');
+  const table   = document.getElementById('ytPreviewTable');
+  const count   = document.getElementById('ytPreviewCount');
+
+  const matched = cards.filter(c => HSK_LOOKUP[c.zh]).length;
+
+  table.innerHTML = cards.map(c => `
+    <div class="yt-preview-row">
+      <span class="yt-zh">${c.zh}</span>
+      <span class="yt-pinyin">${c.pinyin}</span>
+      <span class="yt-en">${c.en}</span>
+      ${hskBadgeHtml(c.zh)}
+    </div>`).join('');
+
+  const matchNote = matched > 0 ? `, ${matched} matched to HSK` : '';
+  count.textContent = `${cards.length} card${cards.length !== 1 ? 's' : ''} extracted${matchNote}`;
+  preview.style.display = 'block';
+}
+
+function clearYtPreview() {
+  ytPendingCards = [];
+  document.getElementById('ytPreview').style.display = 'none';
+  document.getElementById('ytPreviewTable').innerHTML = '';
+}
+
+function addYtCards(groupByHsk = false) {
+  const fb      = document.getElementById('ytFeedback');
+  const catInput = document.getElementById('ytCat').value.trim();
+
+  if (!ytPendingCards.length) return;
+
+  const assignCat = c => {
+    if (groupByHsk) {
+      const lvl = HSK_LOOKUP[c.zh];
+      return lvl ? `HSK ${lvl}` : (catInput || c.cat);
+    }
+    return catInput || c.cat;
+  };
+
+  const cards    = ytPendingCards.map(c => ({ ...c, cat: assignCat(c) }));
+  const existing = new Set(ALL_CARDS.map(c => c.zh + c.cat));
+  const fresh    = cards.filter(c => !existing.has(c.zh + c.cat));
+
+  if (!fresh.length) {
+    fb.className = 'import-feedback error';
+    fb.textContent = 'All extracted cards already exist in the deck.';
+    return;
+  }
+
+  ALL_CARDS = [...ALL_CARDS, ...fresh];
+  saveExtraCards();
+
+  // Jump to the first newly-added category
+  const addedCat = fresh[0].cat;
+  activeCat = addedCat;
+  deck      = ALL_CARDS.filter(c => c.cat === addedCat);
+  index     = 0;
+  known.clear();
+  unknown.clear();
+  buildCategoryButtons();
+  showCard();
+
+  const cats = [...new Set(fresh.map(c => c.cat))];
+  const catLabel = cats.length === 1 ? `"${cats[0]}"` : cats.map(c => `"${c}"`).join(', ');
+  fb.className   = 'import-feedback';
+  fb.textContent = `✓ Added ${fresh.length} card${fresh.length !== 1 ? 's' : ''} to ${catLabel}.`;
+  clearYtPreview();
+  document.getElementById('ytUrl').value = '';
+  document.getElementById('ytCat').value = '';
 }
 
 // ── PWA service worker ────────────────────────────────────────
