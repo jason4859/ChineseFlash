@@ -63,6 +63,7 @@
   <button class="import-toggle" onclick="toggleImport('manual')">+ Add Vocabulary</button>
   <button class="import-toggle yt-toggle" onclick="toggleImport('youtube')">▶ Import from YouTube</button>
   <button class="import-toggle hsk-toggle" onclick="toggleImport('hsk')">📚 HSK Levels</button>
+  <button class="import-toggle log-toggle" onclick="toggleImport('log')">🕓 Import History</button>
 </div>
 
 <!-- Manual import panel -->
@@ -139,6 +140,16 @@
     Start it with: <code>python3 scripts/api_server.py</code><br/>
     Set your key first: <code>export ANTHROPIC_API_KEY=your_key</code>
   </div>
+</div>
+
+<!-- Import history panel -->
+<div class="import-panel log-panel" id="logPanel">
+  <div class="log-header">
+    <span>🕓 Import History</span>
+    <button class="btn btn-clear-import" onclick="clearImportLog()">Clear History</button>
+  </div>
+  <div class="log-table" id="logTable"></div>
+  <div class="log-empty" id="logEmpty">No imports yet.</div>
 </div>
 
 <!-- HSK browser panel -->

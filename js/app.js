@@ -163,18 +163,20 @@ document.addEventListener('keydown', e => {
 // ── Panel toggles ─────────────────────────────────────────────
 
 function toggleImport(panel) {
-  const manualEl = document.getElementById('importPanel');
-  const ytEl     = document.getElementById('ytPanel');
-  const hskEl    = document.getElementById('hskPanel');
-
-  const panels = { manual: manualEl, youtube: ytEl, hsk: hskEl };
-  const target  = panels[panel];
-  const isOpen  = target.classList.contains('open');
+  const panels = {
+    manual:  document.getElementById('importPanel'),
+    youtube: document.getElementById('ytPanel'),
+    hsk:     document.getElementById('hskPanel'),
+    log:     document.getElementById('logPanel'),
+  };
+  const target = panels[panel];
+  const isOpen = target.classList.contains('open');
 
   Object.values(panels).forEach(el => el.classList.remove('open'));
   if (!isOpen) {
     target.classList.add('open');
     if (panel === 'hsk') initHskPanel();
+    if (panel === 'log') renderImportLog();
   }
 }
 
@@ -268,6 +270,57 @@ function importCards(groupByHsk = false) {
   fb.className   = 'import-feedback';
   fb.textContent = `✓ Added ${fresh.length} card${fresh.length > 1 ? 's' : ''} to ${catLabel}${skipMsg}.`;
   document.getElementById('importText').value = '';
+  cats.forEach(c => logImport('csv', c, fresh.filter(x => x.cat === c).length));
+}
+
+// ── Import history log ────────────────────────────────────────
+
+function loadImportLog() {
+  try { return JSON.parse(localStorage.getItem('importLog') || '[]'); } catch { return []; }
+}
+
+function saveImportLog(log) {
+  localStorage.setItem('importLog', JSON.stringify(log));
+}
+
+function logImport(source, category, count) {
+  const log = loadImportLog();
+  log.unshift({ source, category, count, timestamp: new Date().toISOString() });
+  saveImportLog(log.slice(0, 100)); // keep last 100 entries
+}
+
+function renderImportLog() {
+  const log     = loadImportLog();
+  const table   = document.getElementById('logTable');
+  const empty   = document.getElementById('logEmpty');
+
+  if (!log.length) {
+    table.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  table.innerHTML = log.map(entry => {
+    const d     = new Date(entry.timestamp);
+    const date  = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    const time  = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    const src   = entry.source;
+    const cls   = src === 'youtube' ? 'log-source-youtube' : src === 'hsk' ? 'log-source-hsk' : 'log-source-csv';
+    const label = src === 'youtube' ? '▶ YouTube' : src === 'hsk' ? '📚 HSK' : '📄 CSV';
+    return `
+      <div class="log-row">
+        <span class="log-source ${cls}">${label}</span>
+        <span class="log-cat">${entry.category}</span>
+        <span class="log-count">+${entry.count} word${entry.count !== 1 ? 's' : ''}</span>
+        <span class="log-time">${date} ${time}</span>
+      </div>`;
+  }).join('');
+}
+
+function clearImportLog() {
+  localStorage.removeItem('importLog');
+  renderImportLog();
 }
 
 // ── HSK browser ───────────────────────────────────────────────
@@ -338,6 +391,7 @@ function addHskLevelToDeck() {
 
   fb.className   = 'import-feedback';
   fb.textContent = `✓ Added ${fresh.length} HSK ${lvl} word${fresh.length !== 1 ? 's' : ''} to your deck.`;
+  logImport('hsk', cat, fresh.length);
 }
 
 // ── YouTube import ────────────────────────────────────────────
@@ -481,6 +535,7 @@ function addYtCards(groupByHsk = false) {
   const catLabel = cats.length === 1 ? `"${cats[0]}"` : cats.map(c => `"${c}"`).join(', ');
   fb.className   = 'import-feedback';
   fb.textContent = `✓ Added ${fresh.length} card${fresh.length !== 1 ? 's' : ''} to ${catLabel}.`;
+  cats.forEach(c => logImport('youtube', c, fresh.filter(x => x.cat === c).length));
   clearYtPreview();
   document.getElementById('ytUrl').value = '';
   document.getElementById('ytCat').value = '';
