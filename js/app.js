@@ -25,6 +25,63 @@ let isFlipped  = false;
 let known      = new Set();
 let unknown    = new Set();
 
+// ── Card stats (persistent progress tracking) ─────────────────
+
+let cardStats = (() => {
+  try { return JSON.parse(localStorage.getItem('cardStats') || '{}'); } catch { return {}; }
+})();
+
+function getCardKey(card) {
+  return card.zh + '|' + card.cat;
+}
+
+/**
+ * Returns one of: 'known' | 'practice' | 'struggling' | 'unseen'
+ * - known:      correct ≥ 1, wrong = 0
+ * - practice:   correct ≥ 1 AND wrong ≥ 1
+ * - struggling: wrong ≥ 3, correct = 0
+ * - unseen:     never marked, or wrong 1–2 times with no correct
+ */
+function getCardState(key) {
+  const s = cardStats[key];
+  if (!s) return 'unseen';
+  if (s.correct >= 1 && s.wrong === 0) return 'known';
+  if (s.correct >= 1 && s.wrong >= 1)  return 'practice';
+  if (s.wrong >= 3)                    return 'struggling';
+  return 'unseen';
+}
+
+function recordStat(card, isKnown) {
+  const key = getCardKey(card);
+  if (!cardStats[key]) cardStats[key] = { correct: 0, wrong: 0 };
+  if (isKnown) cardStats[key].correct++;
+  else         cardStats[key].wrong++;
+  localStorage.setItem('cardStats', JSON.stringify(cardStats));
+  updateProgressWidget();
+}
+
+function getProgressCounts() {
+  const counts = { known: 0, practice: 0, struggling: 0, unseen: 0 };
+  ALL_CARDS.forEach(c => counts[getCardState(getCardKey(c))]++);
+  return counts;
+}
+
+function updateProgressWidget() {
+  const total  = ALL_CARDS.length || 1;
+  const counts = getProgressCounts();
+
+  const pct = k => ((counts[k] / total) * 100).toFixed(1) + '%';
+  document.getElementById('pwSegKnown').style.width      = pct('known');
+  document.getElementById('pwSegPractice').style.width   = pct('practice');
+  document.getElementById('pwSegStruggling').style.width = pct('struggling');
+  document.getElementById('pwSegUnseen').style.width     = pct('unseen');
+
+  document.getElementById('pwCountKnown').textContent      = counts.known;
+  document.getElementById('pwCountPractice').textContent   = counts.practice;
+  document.getElementById('pwCountStruggling').textContent = counts.struggling;
+  document.getElementById('pwCountUnseen').textContent     = counts.unseen;
+}
+
 // ── Persistence ───────────────────────────────────────────────
 
 /**
@@ -134,9 +191,12 @@ function shuffle() {
 }
 
 function markCard(isKnown) {
-  const key = deck[index].en;
+  const card = deck[index];
+  const key  = card.en;
   if (isKnown) { known.add(key); unknown.delete(key); }
   else         { unknown.add(key); known.delete(key); }
+
+  recordStat(card, isKnown);
 
   if (index < deck.length - 1) {
     index++;
@@ -553,3 +613,4 @@ if ('serviceWorker' in navigator) {
 
 buildCategoryButtons();
 showCard();
+updateProgressWidget();

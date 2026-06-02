@@ -7,11 +7,44 @@
   <meta name="description" content="Chinese language flashcard app with English translations" />
   <title>中文 Flashcards</title>
 
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=2" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 </head>
 <body>
+
+<!-- Progress widget (top-right) -->
+<div class="progress-widget" id="progressWidget">
+  <div class="pw-title">Overall Progress</div>
+  <div class="pw-bar">
+    <div class="pw-seg pw-seg-known"      id="pwSegKnown"      style="width:0%"></div>
+    <div class="pw-seg pw-seg-practice"   id="pwSegPractice"   style="width:0%"></div>
+    <div class="pw-seg pw-seg-struggling" id="pwSegStruggling" style="width:0%"></div>
+    <div class="pw-seg pw-seg-unseen"     id="pwSegUnseen"     style="width:100%"></div>
+  </div>
+  <div class="pw-legend">
+    <div class="pw-item">
+      <span class="pw-dot" style="background:#4caf50"></span>
+      <span class="pw-label">Known</span>
+      <span class="pw-count" id="pwCountKnown">0</span>
+    </div>
+    <div class="pw-item">
+      <span class="pw-dot" style="background:#f0a500"></span>
+      <span class="pw-label">Practice</span>
+      <span class="pw-count" id="pwCountPractice">0</span>
+    </div>
+    <div class="pw-item">
+      <span class="pw-dot" style="background:#ef5350"></span>
+      <span class="pw-label">Struggling</span>
+      <span class="pw-count" id="pwCountStruggling">0</span>
+    </div>
+    <div class="pw-item">
+      <span class="pw-dot" style="background:#334466"></span>
+      <span class="pw-label">Unseen</span>
+      <span class="pw-count" id="pwCountUnseen">0</span>
+    </div>
+  </div>
+</div>
 
 <h1>中文 Flashcards</h1>
 <p class="subtitle">Click a card to reveal the translation</p>

@@ -1,3 +1,71 @@
+/* ── Progress widget (top-right) ───────────────────────────── */
+.progress-widget {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  background: rgba(15, 30, 61, 0.95);
+  border: 1px solid #2a4a7f;
+  border-radius: 14px;
+  padding: 12px 14px;
+  width: 210px;
+  z-index: 200;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.pw-title {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #556;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.pw-bar {
+  display: flex;
+  height: 7px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #1a2a4a;
+  margin-bottom: 10px;
+  gap: 1px;
+}
+
+.pw-seg {
+  height: 100%;
+  transition: width 0.5s ease;
+  min-width: 0;
+}
+
+.pw-seg-known      { background: #4caf50; }
+.pw-seg-practice   { background: #f0a500; }
+.pw-seg-struggling { background: #ef5350; }
+.pw-seg-unseen     { background: #1e3050; }
+
+.pw-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 6px;
+}
+
+.pw-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+}
+
+.pw-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pw-label { color: #667; flex: 1; }
+.pw-count { color: #ccc; font-weight: 700; }
+
 /* ── Reset & base ──────────────────────────────────────────── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
