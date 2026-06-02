@@ -278,34 +278,91 @@ h1 {
   color: #7a9ad0;
   border: 1px solid #2a4a7f;
   font-size: 0.8rem;
+  margin-bottom: 0;
 }
 
 .btn-shuffle:hover { background: #1e3a6e; }
 
-/* ── Known / Unknown ───────────────────────────────────────── */
+/* ── SRS Feedback Buttons (SM-2: Again / Hard / Good / Easy) ── */
 .feedback-btns {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: 12px;
+  max-width: 480px;
+  width: 100%;
 }
 
-.btn-known {
-  background: #0d3d1a;
-  color: #4caf50;
-  border: 1px solid #2e7d32;
+.feedback-btns .btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 6px;
   font-size: 0.85rem;
+  gap: 3px;
 }
 
-.btn-known:hover { background: #1b5e20; }
+.srs-interval {
+  font-size: 0.62rem;
+  font-weight: 400;
+  opacity: 0.75;
+  display: block;
+  letter-spacing: 0.3px;
+}
 
-.btn-unknown {
+.btn-again {
   background: #3d0d0d;
   color: #ef5350;
   border: 1px solid #7d2020;
-  font-size: 0.85rem;
+}
+.btn-again:hover { background: #5e1b1b; }
+
+.btn-hard {
+  background: #3d2a0d;
+  color: #f0a500;
+  border: 1px solid #7d5a20;
+}
+.btn-hard:hover { background: #5e4010; }
+
+.btn-good {
+  background: #0d2a3d;
+  color: #5eb8e8;
+  border: 1px solid #1f5a7d;
+}
+.btn-good:hover { background: #103a5e; }
+
+.btn-easy {
+  background: #0d3d1a;
+  color: #4caf50;
+  border: 1px solid #2e7d32;
+}
+.btn-easy:hover { background: #1b5e20; }
+
+/* Legacy — kept for any existing references */
+.btn-known   { background: #0d3d1a; color: #4caf50; border: 1px solid #2e7d32; font-size: 0.85rem; }
+.btn-unknown { background: #3d0d0d; color: #ef5350; border: 1px solid #7d2020; font-size: 0.85rem; }
+
+/* ── Study controls row (Shuffle + Study Due) ──────────────── */
+.study-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 0;
 }
 
-.btn-unknown:hover { background: #5e1b1b; }
+.btn-study-due {
+  background: #16213e;
+  color: #7ab3e8;
+  border: 1px solid #2a4a7f;
+  font-size: 0.8rem;
+}
+.btn-study-due:hover:not(:disabled) { background: #1e3a6e; }
+.btn-study-due:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-study-due.active {
+  background: #1a3a6e;
+  color: #5eb8e8;
+  border-color: #5eb8e8;
+}
 
 /* ── Stats ─────────────────────────────────────────────────── */
 .stats {

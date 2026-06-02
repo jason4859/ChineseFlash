@@ -7,7 +7,7 @@
   <meta name="description" content="Chinese language flashcard app with English translations" />
   <title>中文 Flashcards</title>
 
-  <link rel="stylesheet" href="css/styles.css?v=2" />
+  <link rel="stylesheet" href="css/styles.css?v=3" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 </head>
@@ -79,11 +79,24 @@
 </div>
 
 <div class="feedback-btns" id="feedbackBtns" style="display:none;">
-  <button class="btn btn-unknown" onclick="markCard(false)">&#x2715; Still learning</button>
-  <button class="btn btn-known" onclick="markCard(true)">&#x2713; Got it!</button>
+  <button class="btn btn-again" onclick="markCard(1)">
+    Again<span class="srs-interval" id="srsAgain"></span>
+  </button>
+  <button class="btn btn-hard" onclick="markCard(2)">
+    Hard<span class="srs-interval" id="srsHard"></span>
+  </button>
+  <button class="btn btn-good" onclick="markCard(3)">
+    Good<span class="srs-interval" id="srsGood"></span>
+  </button>
+  <button class="btn btn-easy" onclick="markCard(4)">
+    Easy<span class="srs-interval" id="srsEasy"></span>
+  </button>
 </div>
 
-<button class="btn btn-shuffle" onclick="shuffle()">&#x21C4; Shuffle Deck</button>
+<div class="study-controls">
+  <button class="btn btn-shuffle" onclick="shuffle()">&#x21C4; Shuffle</button>
+  <button class="btn btn-study-due" id="btnStudyDue" onclick="enterDueMode()">📅 Due: <span id="dueCount">0</span></button>
+</div>
 
 <div class="stats">
   <span>Total: <strong id="statTotal">0</strong></span>

@@ -17,13 +17,14 @@
 
 // ── State ─────────────────────────────────────────────────────
 
-let ALL_CARDS = loadAllCards();
+let ALL_CARDS  = loadAllCards();
 let activeCat  = 'All';
 let deck       = [...ALL_CARDS];
 let index      = 0;
 let isFlipped  = false;
 let known      = new Set();
 let unknown    = new Set();
+let studyMode  = 'all'; // 'all' | 'due'
 
 // ── Card stats (persistent progress tracking) ─────────────────
 
@@ -37,27 +38,27 @@ function getCardKey(card) {
 
 /**
  * Returns one of: 'known' | 'practice' | 'struggling' | 'unseen'
- * - known:      correct ≥ 1, wrong = 0
- * - practice:   correct ≥ 1 AND wrong ≥ 1
- * - struggling: wrong ≥ 3, correct = 0
- * - unseen:     never marked, or wrong 1–2 times with no correct
+ * SRS-aware when SM-2 data is present; falls back to legacy counts.
+ *
+ * - known:      SRS mature (interval ≥ 21d) OR legacy correct≥1 wrong=0
+ * - practice:   SRS young  (interval 1-20d)  OR legacy correct≥1 wrong≥1
+ * - struggling: SRS lapsed              OR legacy wrong≥3
+ * - unseen:     never reviewed
  */
 function getCardState(key) {
   const s = cardStats[key];
   if (!s) return 'unseen';
+  if (s.interval !== undefined) {           // SRS mode
+    if (s.repetitions === 0) return s.lapses > 0 ? 'struggling' : 'unseen';
+    if (s.interval >= 21)    return 'known';
+    if (s.lapses    >  0)    return 'struggling';
+    return 'practice';
+  }
+  // Legacy fallback
   if (s.correct >= 1 && s.wrong === 0) return 'known';
   if (s.correct >= 1 && s.wrong >= 1)  return 'practice';
-  if (s.wrong >= 3)                    return 'struggling';
+  if (s.wrong   >= 3)                  return 'struggling';
   return 'unseen';
-}
-
-function recordStat(card, isKnown) {
-  const key = getCardKey(card);
-  if (!cardStats[key]) cardStats[key] = { correct: 0, wrong: 0 };
-  if (isKnown) cardStats[key].correct++;
-  else         cardStats[key].wrong++;
-  localStorage.setItem('cardStats', JSON.stringify(cardStats));
-  updateProgressWidget();
 }
 
 function getProgressCounts() {
@@ -80,6 +81,128 @@ function updateProgressWidget() {
   document.getElementById('pwCountPractice').textContent   = counts.practice;
   document.getElementById('pwCountStruggling').textContent = counts.struggling;
   document.getElementById('pwCountUnseen').textContent     = counts.unseen;
+}
+
+// ── Spaced Repetition — SM-2 ──────────────────────────────────
+
+/**
+ * Core SM-2 algorithm (Anki variant).
+ * rating: 1=Again  2=Hard  3=Good  4=Easy
+ * Returns a new stat object with updated SRS fields.
+ */
+function sm2(stat, rating) {
+  let interval    = stat.interval    ?? 0;
+  let easeFactor  = stat.easeFactor  ?? 2.5;
+  let repetitions = stat.repetitions ?? 0;
+  let lapses      = stat.lapses      ?? 0;
+
+  if (rating === 1) {                          // Again — forgot
+    if (repetitions > 1) lapses++;             // lapse only if card was graduated
+    repetitions = 0;
+    interval    = 1;
+  } else {
+    if (repetitions === 0) {
+      interval = (rating === 4) ? 4 : 1;
+    } else if (repetitions === 1) {
+      if      (rating === 2) interval = 3;
+      else if (rating === 4) interval = 8;
+      else                   interval = 6;
+    } else {
+      const base = Math.round(interval * easeFactor);
+      if      (rating === 2) interval = Math.max(interval + 1, Math.round(base * 0.8));
+      else if (rating === 4) interval = Math.round(base * 1.3);
+      else                   interval = base;
+    }
+    repetitions++;
+  }
+
+  // SM-2 ease-factor update (q: Again→1, Hard→3, Good→4, Easy→5)
+  const q = [0, 1, 3, 4, 5][rating];
+  easeFactor = Math.max(1.3,
+    easeFactor + 0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)
+  );
+
+  const due = new Date();
+  due.setDate(due.getDate() + interval);
+
+  return {
+    interval,
+    easeFactor: +easeFactor.toFixed(3),
+    repetitions,
+    lapses,
+    dueDate: due.toISOString().split('T')[0],
+    // Preserve legacy fields for backward compat
+    correct: (stat.correct ?? 0) + (rating >= 3 ? 1 : 0),
+    wrong:   (stat.wrong   ?? 0) + (rating <= 2 ? 1 : 0),
+  };
+}
+
+/** Preview next interval without committing. */
+function previewInterval(stat, rating) {
+  return sm2(stat || {}, rating).interval;
+}
+
+/** Human-readable interval label. */
+function formatInterval(days) {
+  if (days <= 1)  return '1d';
+  if (days < 7)   return days + 'd';
+  if (days < 30)  return Math.round(days / 7) + 'w';
+  if (days < 365) return Math.round(days / 30) + 'mo';
+  return Math.round(days / 365) + 'yr';
+}
+
+/** True if card is due today (or new). */
+function isCardDue(card) {
+  const s = cardStats[getCardKey(card)];
+  if (!s || !s.dueDate) return true;
+  return s.dueDate <= new Date().toISOString().split('T')[0];
+}
+
+function getDueCount(fromCards) {
+  return (fromCards || ALL_CARDS).filter(isCardDue).length;
+}
+
+/** Refresh the "📅 Due: N" button label and state. */
+function updateDueBadge() {
+  const pool = activeCat === 'All'
+    ? ALL_CARDS
+    : ALL_CARDS.filter(c => c.cat === activeCat);
+  const n   = getDueCount(pool);
+  const el  = document.getElementById('dueCount');
+  const btn = document.getElementById('btnStudyDue');
+  if (el)  el.textContent = n;
+  if (btn) {
+    btn.disabled = (n === 0 && studyMode !== 'due');
+    btn.classList.toggle('active', studyMode === 'due');
+  }
+}
+
+/** Toggle due-card study mode. */
+function enterDueMode() {
+  if (studyMode === 'due') {
+    // Exit — return to browse
+    studyMode = 'all';
+    deck  = activeCat === 'All' ? [...ALL_CARDS] : ALL_CARDS.filter(c => c.cat === activeCat);
+    index = 0; known.clear(); unknown.clear();
+    showCard(); updateDueBadge();
+    return;
+  }
+  const pool = activeCat === 'All' ? ALL_CARDS : ALL_CARDS.filter(c => c.cat === activeCat);
+  const due  = pool.filter(isCardDue);
+  if (!due.length) return;
+  studyMode = 'due';
+  deck  = due;
+  index = 0; known.clear(); unknown.clear();
+  showCard(); updateDueBadge();
+}
+
+/** Update interval-preview labels on the four SRS buttons. */
+function updateSrsButtons(card) {
+  const stat = cardStats[getCardKey(card)] || {};
+  ['Again', 'Hard', 'Good', 'Easy'].forEach((name, i) => {
+    const el = document.getElementById('srs' + name);
+    if (el) el.textContent = formatInterval(previewInterval(stat, i + 1));
+  });
 }
 
 // ── Persistence ───────────────────────────────────────────────
@@ -124,12 +247,14 @@ function buildCategoryButtons() {
 
 function selectCategory(cat) {
   activeCat = cat;
+  studyMode = 'all';
   deck = cat === 'All' ? [...ALL_CARDS] : ALL_CARDS.filter(c => c.cat === cat);
   index = 0;
   known.clear();
   unknown.clear();
   buildCategoryButtons();
   showCard();
+  updateDueBadge();
 }
 
 // ── Card display ──────────────────────────────────────────────
@@ -151,7 +276,9 @@ function showCard() {
 
   const pct = ((index + 1) / deck.length) * 100;
   document.getElementById('progressBar').style.width = pct + '%';
-  document.getElementById('counter').textContent     = `Card ${index + 1} of ${deck.length}`;
+  document.getElementById('counter').textContent     = studyMode === 'due'
+    ? `Due: ${index + 1} of ${deck.length}`
+    : `Card ${index + 1} of ${deck.length}`;
   document.getElementById('btnPrev').disabled        = index === 0;
   document.getElementById('btnNext').disabled        = index === deck.length - 1;
 
@@ -170,6 +297,7 @@ function flipCard() {
   isFlipped = !isFlipped;
   document.getElementById('card').classList.toggle('flipped', isFlipped);
   document.getElementById('feedbackBtns').style.display = isFlipped ? 'flex' : 'none';
+  if (isFlipped && deck[index]) updateSrsButtons(deck[index]);
 }
 
 function navigate(dir) {
@@ -180,6 +308,8 @@ function navigate(dir) {
 }
 
 function shuffle() {
+  studyMode = 'all';
+  deck = activeCat === 'All' ? [...ALL_CARDS] : ALL_CARDS.filter(c => c.cat === activeCat);
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -188,16 +318,44 @@ function shuffle() {
   known.clear();
   unknown.clear();
   showCard();
+  updateDueBadge();
 }
 
-function markCard(isKnown) {
+function markCard(rating) {
+  // rating: 1=Again  2=Hard  3=Good  4=Easy
   const card = deck[index];
-  const key  = card.en;
-  if (isKnown) { known.add(key); unknown.delete(key); }
-  else         { unknown.add(key); known.delete(key); }
+  const key  = getCardKey(card);
 
-  recordStat(card, isKnown);
+  // Apply SM-2 and persist
+  cardStats[key] = sm2(cardStats[key] || {}, rating);
+  localStorage.setItem('cardStats', JSON.stringify(cardStats));
 
+  // Legacy session sets
+  if (rating >= 3) { known.add(card.en); unknown.delete(card.en); }
+  else             { unknown.add(card.en); known.delete(card.en); }
+
+  updateProgressWidget();
+  updateDueBadge();
+
+  // ── Due-mode navigation ──────────────────────────────────────
+  if (studyMode === 'due') {
+    deck.splice(index, 1);
+    if (rating === 1) deck.push(card); // Again → see it again this session
+
+    if (!deck.length) {
+      document.getElementById('feedbackBtns').style.display = 'none';
+      document.getElementById('counter').textContent = '🎉 All due cards reviewed!';
+      document.getElementById('progressBar').style.width = '100%';
+      studyMode = 'all';
+      updateDueBadge();
+      return;
+    }
+    if (index >= deck.length) index = deck.length - 1;
+    showCard();
+    return;
+  }
+
+  // ── Browse-mode navigation ───────────────────────────────────
   if (index < deck.length - 1) {
     index++;
     showCard();
@@ -211,10 +369,15 @@ function markCard(isKnown) {
 
 document.addEventListener('keydown', e => {
   switch (e.key) {
-    case 'ArrowLeft':  navigate(-1);  break;
-    case 'ArrowRight': navigate(1);   break;
+    case 'ArrowLeft':  navigate(-1); break;
+    case 'ArrowRight': navigate(1);  break;
     case ' ':
-    case 'Enter':      flipCard();    break;
+    case 'Enter':      flipCard();   break;
+    // SRS ratings (only when card is flipped)
+    case '1': if (isFlipped) markCard(1); break; // Again
+    case '2': if (isFlipped) markCard(2); break; // Hard
+    case '3': if (isFlipped) markCard(3); break; // Good
+    case '4': if (isFlipped) markCard(4); break; // Easy
   }
 });
 
@@ -614,3 +777,4 @@ if ('serviceWorker' in navigator) {
 buildCategoryButtons();
 showCard();
 updateProgressWidget();
+updateDueBadge();
