@@ -7,11 +7,14 @@
   <meta name="description" content="Chinese language flashcard app with English translations" />
   <title>中文 Flashcards</title>
 
-  <link rel="stylesheet" href="css/styles.css?v=3" />
+  <link rel="stylesheet" href="css/styles.css?v=4" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 </head>
 <body>
+
+<!-- Language direction toggle (top-left) -->
+<button class="lang-toggle-btn" id="btnLangToggle" onclick="toggleFrontLang()" title="Switch card direction">EN → 中</button>
 
 <!-- Progress widget (top-right) -->
 <div class="progress-widget" id="progressWidget">
@@ -59,15 +62,22 @@
 <div class="scene" id="scene" onclick="flipCard()">
   <div class="card" id="card">
     <div class="face front">
-      <div class="hint">English</div>
-      <div class="english-word" id="frontWord"></div>
+      <div class="hint" id="frontHint">English</div>
+      <!-- EN-first: show English word -->
+      <div class="english-word" id="frontEn"></div>
+      <!-- ZH-first: show Chinese chars + pinyin -->
+      <div class="chinese-chars" id="frontZh"></div>
+      <div class="pinyin" id="frontPinyin"></div>
       <div class="category-tag" id="frontCat"></div>
     </div>
     <div class="face back">
-      <div class="hint">Chinese</div>
-      <div class="chinese-chars" id="backChars"></div>
+      <div class="hint" id="backHint">Chinese</div>
+      <!-- EN-first back: Chinese chars + pinyin + small English label -->
+      <div class="chinese-chars" id="backZh"></div>
       <div class="pinyin" id="backPinyin"></div>
-      <div class="english-label" id="backEnglish"></div>
+      <div class="english-label" id="backEnLabel"></div>
+      <!-- ZH-first back: big English word -->
+      <div class="english-word" id="backEnWord"></div>
     </div>
   </div>
 </div>

@@ -25,6 +25,7 @@ let isFlipped  = false;
 let known      = new Set();
 let unknown    = new Set();
 let studyMode  = 'all'; // 'all' | 'due'
+let frontLang  = 'en';  // 'en'  | 'zh'
 
 // ── Card stats (persistent progress tracking) ─────────────────
 
@@ -205,6 +206,48 @@ function updateSrsButtons(card) {
   });
 }
 
+// ── Language direction toggle ──────────────────────────────────
+
+/**
+ * Apply the current frontLang to the card face visibility and button label.
+ * Called by showCard() and toggleFrontLang().
+ */
+function applyLangMode() {
+  const enFirst = frontLang === 'en';
+
+  // Hints
+  const fh = document.getElementById('frontHint');
+  const bh = document.getElementById('backHint');
+  if (fh) fh.textContent = enFirst ? 'English' : 'Chinese';
+  if (bh) bh.textContent = enFirst ? 'Chinese' : 'English';
+
+  // Front face
+  const show = (id, vis) => { const el = document.getElementById(id); if (el) el.style.display = vis ? '' : 'none'; };
+  show('frontEn',    enFirst);
+  show('frontZh',   !enFirst);
+  show('frontPinyin',!enFirst);
+
+  // Back face
+  show('backZh',       enFirst);
+  show('backPinyin',   enFirst);
+  show('backEnLabel',  enFirst);
+  show('backEnWord',  !enFirst);
+
+  // Toggle button label + style
+  const btn = document.getElementById('btnLangToggle');
+  if (btn) {
+    btn.textContent = enFirst ? 'EN → 中' : '中 → EN';
+    btn.classList.toggle('zh-first', !enFirst);
+  }
+}
+
+function toggleFrontLang() {
+  frontLang = frontLang === 'en' ? 'zh' : 'en';
+  // Re-render current card from scratch (unflipped)
+  if (deck.length) showCard();
+  else applyLangMode();
+}
+
 // ── Persistence ───────────────────────────────────────────────
 
 /**
@@ -268,11 +311,16 @@ function showCard() {
   document.getElementById('feedbackBtns').style.display = 'none';
 
   const current = deck[index];
-  document.getElementById('frontWord').textContent   = current.en;
-  document.getElementById('frontCat').textContent    = current.cat;
-  document.getElementById('backChars').textContent   = current.zh;
-  document.getElementById('backPinyin').textContent  = current.pinyin;
-  document.getElementById('backEnglish').textContent = current.en;
+  // Populate all card fields (visibility controlled by applyLangMode)
+  document.getElementById('frontEn').textContent      = current.en;
+  document.getElementById('frontZh').textContent      = current.zh;
+  document.getElementById('frontPinyin').textContent  = current.pinyin;
+  document.getElementById('frontCat').textContent     = current.cat;
+  document.getElementById('backZh').textContent       = current.zh;
+  document.getElementById('backPinyin').textContent   = current.pinyin;
+  document.getElementById('backEnLabel').textContent  = current.en;
+  document.getElementById('backEnWord').textContent   = current.en;
+  applyLangMode();
 
   const pct = ((index + 1) / deck.length) * 100;
   document.getElementById('progressBar').style.width = pct + '%';
