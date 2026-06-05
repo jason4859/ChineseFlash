@@ -368,6 +368,70 @@ h1 {
 .btn-known   { background: #0d3d1a; color: #4caf50; border: 1px solid #2e7d32; font-size: 0.85rem; }
 .btn-unknown { background: #3d0d0d; color: #ef5350; border: 1px solid #7d2020; font-size: 0.85rem; }
 
+/* ── Example sentences ─────────────────────────────────────── */
+.examples-wrap {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 4px;
+}
+
+.btn-examples {
+  background: #16213e;
+  color: #7ab3e8;
+  border: 1px solid #2a4a7f;
+  font-size: 0.82rem;
+  width: 100%;
+  letter-spacing: 0.3px;
+}
+.btn-examples:hover:not(:disabled) { background: #1e3a6e; border-color: #5eb8e8; }
+.btn-examples:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.examples-panel {
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  background: #16213e;
+  border: 1px solid #2a4a7f;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.examples-panel.open { display: flex; }
+
+.example-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #1a2a4a;
+}
+.example-item:last-child { border-bottom: none; }
+.example-item:nth-child(odd) { background: #0f1e3d; }
+
+.example-zh {
+  font-size: 1.05rem;
+  color: #e8d5b7;
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+.example-pinyin {
+  font-size: 0.76rem;
+  color: #c8956c;
+  font-style: italic;
+  margin-bottom: 3px;
+}
+.example-en {
+  font-size: 0.78rem;
+  color: #778;
+}
+
+.examples-error {
+  font-size: 0.78rem;
+  color: #ef5350;
+  text-align: center;
+  padding: 12px;
+}
+
 /* ── Study controls row (Shuffle + Study Due) ──────────────── */
 .study-controls {
   display: flex;

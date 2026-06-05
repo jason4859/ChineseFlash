@@ -206,6 +206,85 @@ function updateSrsButtons(card) {
   });
 }
 
+// ── Example sentences ──────────────────────────────────────────
+
+let sentenceCache = (() => {
+  try { return JSON.parse(localStorage.getItem('sentenceCache') || '{}'); } catch { return {}; }
+})();
+
+let examplesOpen = false;
+
+/** Show or hide the example sentences panel. */
+function toggleExamples() {
+  if (examplesOpen) {
+    resetExamples();
+    return;
+  }
+  const key = getCardKey(deck[index]);
+  if (sentenceCache[key]) {
+    renderExamples(sentenceCache[key]);
+  } else {
+    loadExamples();
+  }
+}
+
+async function loadExamples() {
+  const card  = deck[index];
+  const key   = getCardKey(card);
+  const btn   = document.getElementById('btnExamples');
+  const panel = document.getElementById('examplesPanel');
+
+  btn.disabled    = true;
+  btn.textContent = '⏳ Loading…';
+
+  try {
+    const health = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(3000) });
+    if (!health.ok) throw new Error('API server not responding');
+
+    const res = await fetch(`${API_URL}/sentences`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ zh: card.zh, en: card.en, pinyin: card.pinyin }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+
+    sentenceCache[key] = data.sentences;
+    localStorage.setItem('sentenceCache', JSON.stringify(sentenceCache));
+    renderExamples(data.sentences);
+
+  } catch (err) {
+    panel.innerHTML = `<div class="examples-error">⚠ ${err.message}</div>`;
+    panel.classList.add('open');
+    btn.disabled    = false;
+    btn.textContent = '💬 Example Sentences';
+  }
+}
+
+function renderExamples(sentences) {
+  const panel = document.getElementById('examplesPanel');
+  const btn   = document.getElementById('btnExamples');
+  examplesOpen    = true;
+  panel.innerHTML = sentences.map(s => `
+    <div class="example-item">
+      <div class="example-zh">${s.zh}</div>
+      <div class="example-pinyin">${s.pinyin}</div>
+      <div class="example-en">${s.en}</div>
+    </div>`).join('');
+  panel.classList.add('open');
+  btn.disabled    = false;
+  btn.textContent = '✕ Hide Examples';
+}
+
+function resetExamples() {
+  examplesOpen = false;
+  const panel  = document.getElementById('examplesPanel');
+  const btn    = document.getElementById('btnExamples');
+  if (panel) { panel.innerHTML = ''; panel.classList.remove('open'); }
+  if (btn)   { btn.textContent = '💬 Example Sentences'; btn.disabled = false; }
+}
+
 // ── Language direction toggle ──────────────────────────────────
 
 /**
@@ -309,6 +388,8 @@ function showCard() {
   isFlipped = false;
   card.classList.remove('flipped');
   document.getElementById('feedbackBtns').style.display = 'none';
+  document.getElementById('examplesWrap').style.display = 'none';
+  resetExamples();
 
   const current = deck[index];
   // Populate all card fields (visibility controlled by applyLangMode)
@@ -344,8 +425,13 @@ function updateStats() {
 function flipCard() {
   isFlipped = !isFlipped;
   document.getElementById('card').classList.toggle('flipped', isFlipped);
-  document.getElementById('feedbackBtns').style.display = isFlipped ? 'flex' : 'none';
-  if (isFlipped && deck[index]) updateSrsButtons(deck[index]);
+  document.getElementById('feedbackBtns').style.display  = isFlipped ? 'flex' : 'none';
+  document.getElementById('examplesWrap').style.display  = isFlipped ? 'flex' : 'none';
+  if (isFlipped && deck[index]) {
+    updateSrsButtons(deck[index]);
+  } else {
+    resetExamples();
+  }
 }
 
 function navigate(dir) {

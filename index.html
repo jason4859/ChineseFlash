@@ -7,7 +7,7 @@
   <meta name="description" content="Chinese language flashcard app with English translations" />
   <title>中文 Flashcards</title>
 
-  <link rel="stylesheet" href="css/styles.css?v=4" />
+  <link rel="stylesheet" href="css/styles.css?v=5" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 </head>
@@ -101,6 +101,12 @@
   <button class="btn btn-easy" onclick="markCard(4)">
     Easy<span class="srs-interval" id="srsEasy"></span>
   </button>
+</div>
+
+<!-- Example sentences (shown when card is flipped) -->
+<div class="examples-wrap" id="examplesWrap" style="display:none;">
+  <button class="btn btn-examples" id="btnExamples" onclick="toggleExamples()">💬 Example Sentences</button>
+  <div class="examples-panel" id="examplesPanel"></div>
 </div>
 
 <div class="study-controls">

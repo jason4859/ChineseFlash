@@ -6,8 +6,10 @@ Runs on http://localhost:8001
 
 Endpoints:
   GET  /health
-  POST /extract   { "url": "...", "max_words": 20 }
+  POST /extract    { "url": "...", "max_words": 20 }
        → { "category": "...", "cards": [{ "zh", "pinyin", "en" }, ...] }
+  POST /sentences  { "zh": "...", "en": "...", "pinyin": "..." }
+       → { "sentences": [{ "zh", "pinyin", "en" }, ...] }
 
 Start with:
   python3 scripts/api_server.py
@@ -120,6 +122,44 @@ Transcript:
     return cards
 
 
+def generate_sentences(zh: str, en: str, pinyin: str) -> list:
+    """Use Claude to generate 3 example sentences for a vocabulary word."""
+    import anthropic as ant
+
+    key = os.environ.get('ANTHROPIC_API_KEY', '').strip()
+    if not key:
+        raise EnvironmentError('No Anthropic API key found. Set ANTHROPIC_API_KEY.')
+
+    client = ant.Anthropic(api_key=key)
+
+    prompt = f"""Generate 3 example sentences in Mandarin Chinese using the word "{zh}" ({pinyin}, meaning: {en}).
+
+Requirements:
+- Every sentence must naturally include "{zh}"
+- Keep vocabulary at beginner-intermediate level (roughly HSK 2-4)
+- Make sentences practical and conversational
+- Vary sentence structures (e.g. statement, question, negative)
+
+Return ONLY a JSON array with exactly 3 objects — no other text:
+[
+  {{"zh": "Chinese sentence here", "pinyin": "full sentence pinyin with tone marks", "en": "English translation"}},
+  {{"zh": "...", "pinyin": "...", "en": "..."}},
+  {{"zh": "...", "pinyin": "...", "en": "..."}}
+]"""
+
+    msg = client.messages.create(
+        model='claude-opus-4-5',
+        max_tokens=600,
+        messages=[{'role': 'user', 'content': prompt}]
+    )
+
+    text = msg.content[0].text.strip()
+    match = re.search(r'\[.*?\]', text, re.DOTALL)
+    if not match:
+        raise ValueError('Could not parse sentences from Claude response')
+    return json.loads(match.group())
+
+
 # ── Request handler ───────────────────────────────────────────
 
 class Handler(BaseHTTPRequestHandler):
@@ -150,7 +190,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(404, {'error': 'Not found'})
 
     def do_POST(self):
-        if self.path != '/extract':
+        path = self.path.split('?')[0]
+        if path not in ('/extract', '/sentences'):
             self.send_json(404, {'error': 'Not found'})
             return
 
@@ -161,9 +202,30 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(400, {'error': 'Invalid JSON body'})
             return
 
+        # ── /sentences ────────────────────────────────────────────
+        if path == '/sentences':
+            zh     = body.get('zh', '').strip()
+            en     = body.get('en', '').strip()
+            pinyin = body.get('pinyin', '').strip()
+
+            if not zh:
+                self.send_json(400, {'error': 'Missing "zh" field'})
+                return
+
+            try:
+                print(f'  Generating example sentences for "{zh}"...')
+                sentences = generate_sentences(zh, en, pinyin)
+                print(f'  Done — {len(sentences)} sentences generated')
+                self.send_json(200, {'sentences': sentences})
+            except EnvironmentError as e:
+                self.send_json(500, {'error': str(e)})
+            except Exception as e:
+                self.send_json(500, {'error': f'Unexpected error: {e}'})
+            return
+
+        # ── /extract ──────────────────────────────────────────────
         url       = body.get('url', '').strip()
         max_words = int(body.get('max_words', 20))
-        api_key   = self.headers.get('X-API-Key', '').strip()
 
         if not url:
             self.send_json(400, {'error': 'Missing "url" field'})
@@ -206,7 +268,8 @@ if __name__ == '__main__':
 
     server = HTTPServer(('localhost', PORT), Handler)
     print(f'✅  Flashcard API server running on http://localhost:{PORT}')
-    print(f'   POST /extract  {{ "url": "...", "max_words": 20 }}')
+    print(f'   POST /extract    {{ "url": "...", "max_words": 20 }}')
+    print(f'   POST /sentences  {{ "zh": "...", "en": "...", "pinyin": "..." }}')
     print('   Press Ctrl+C to stop\n')
     try:
         server.serve_forever()
