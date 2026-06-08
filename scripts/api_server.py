@@ -32,6 +32,25 @@ warnings.filterwarnings('ignore')
 
 PORT = 8001
 
+# ── Load .env from project root (one level up from scripts/) ──
+
+def _load_env_file():
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+    if not os.path.exists(env_path):
+        return
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, _, val = line.partition('=')
+            key = key.strip()
+            val = val.strip().strip('"\'')
+            if key and key not in os.environ:   # env var takes priority over .env
+                os.environ[key] = val
+
+_load_env_file()
+
 # ── Helpers ───────────────────────────────────────────────────
 
 def extract_video_id(url_or_id: str) -> str:
