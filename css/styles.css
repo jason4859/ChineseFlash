@@ -296,6 +296,25 @@ h1 {
 
 .btn-flip:hover { filter: brightness(1.1); }
 
+/* ── Audio / speak button ──────────────────────────────────── */
+.btn-speak {
+  background: #16213e;
+  color: #e8d5b7;
+  border: 1px solid #2a4a7f;
+  font-size: 1.1rem;
+  padding: 8px 14px;
+}
+.btn-speak:hover { background: #1e3a6e; }
+.btn-speak.speaking {
+  color: #c8956c;
+  border-color: #c8956c;
+  animation: pulse-speak 0.8s ease-in-out infinite;
+}
+@keyframes pulse-speak {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
 .btn-shuffle {
   background: #16213e;
   color: #7a9ad0;

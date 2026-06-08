@@ -397,6 +397,32 @@ function saveApiKey() {
   if (_apiKeyCallback) _apiKeyCallback();
 }
 
+// ── Audio pronunciation ────────────────────────────────────────
+
+const TTS_SUPPORTED = 'speechSynthesis' in window;
+
+/**
+ * Speak the Chinese text of the current card using the device's TTS engine.
+ * lang zh-CN gives Mandarin pronunciation on all modern browsers/iOS/Android.
+ */
+function speakChinese(text) {
+  if (!TTS_SUPPORTED || !deck.length) return;
+  const zh = text || deck[index].zh;
+  window.speechSynthesis.cancel();
+  const utter    = new SpeechSynthesisUtterance(zh);
+  utter.lang     = 'zh-CN';
+  utter.rate     = 0.85;   // slightly slower — better for learning
+  utter.pitch    = 1;
+
+  const btn = document.getElementById('btnSpeak');
+  if (btn) btn.classList.add('speaking');
+  utter.onend = utter.onerror = () => {
+    if (btn) btn.classList.remove('speaking');
+  };
+
+  window.speechSynthesis.speak(utter);
+}
+
 // ── Language direction toggle ──────────────────────────────────
 
 /**
@@ -524,6 +550,8 @@ function showCard() {
   document.getElementById('btnNext').disabled        = index === deck.length - 1;
 
   updateStats();
+  // Auto-play Chinese when front face shows Chinese (ZH-first mode)
+  if (frontLang === 'zh') speakChinese();
 }
 
 function updateStats() {
@@ -541,6 +569,8 @@ function flipCard() {
   document.getElementById('examplesWrap').style.display  = isFlipped ? 'flex' : 'none';
   if (isFlipped && deck[index]) {
     updateSrsButtons(deck[index]);
+    // Auto-play Chinese when card flips to show Chinese (EN-first mode back)
+    if (frontLang === 'en') speakChinese();
   } else {
     resetExamples();
   }
