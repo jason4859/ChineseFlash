@@ -214,12 +214,65 @@ let sentenceCache = (() => {
 
 let examplesOpen = false;
 
+// ── Stored API key (for mobile / GitHub Pages direct calls) ───
+function getStoredApiKey()    { return localStorage.getItem('anthropicApiKey') || ''; }
+function setStoredApiKey(key) { localStorage.setItem('anthropicApiKey', key.trim()); }
+
+/**
+ * Call Anthropic API directly from the browser.
+ * Used when the local server (localhost:8001) is not reachable.
+ */
+async function callAnthropicDirect(prompt, apiKey) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key':                                apiKey,
+      'anthropic-version':                        '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+      'content-type':                             'application/json',
+    },
+    body: JSON.stringify({
+      model:      'claude-opus-4-5',
+      max_tokens: 600,
+      messages:   [{ role: 'user', content: prompt }],
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data?.error?.message || `API error ${res.status}`;
+    const err = new Error(msg);
+    err.status = res.status;
+    throw err;
+  }
+  return data.content[0].text;
+}
+
+async function generateSentencesDirect(card, apiKey) {
+  const { zh, en, pinyin } = card;
+  const prompt = `Generate 3 example sentences in Mandarin Chinese using the word "${zh}" (${pinyin}, meaning: ${en}).
+
+Requirements:
+- Every sentence must naturally include "${zh}"
+- Keep vocabulary at beginner-intermediate level (roughly HSK 2-4)
+- Make sentences practical and conversational
+- Vary sentence structures (statement, question, negative, etc.)
+
+Return ONLY a JSON array with exactly 3 objects — no other text:
+[
+  {"zh": "Chinese sentence", "pinyin": "full sentence pinyin with tone marks", "en": "English translation"},
+  {"zh": "...", "pinyin": "...", "en": "..."},
+  {"zh": "...", "pinyin": "...", "en": "..."}
+]`;
+
+  const text  = await callAnthropicDirect(prompt, apiKey);
+  const match = text.match(/\[[\s\S]*?\]/);
+  if (!match) throw new Error('Could not parse response from Claude');
+  return JSON.parse(match[0]);
+}
+
 /** Show or hide the example sentences panel. */
 function toggleExamples() {
-  if (examplesOpen) {
-    resetExamples();
-    return;
-  }
+  if (examplesOpen) { resetExamples(); return; }
   const key = getCardKey(deck[index]);
   if (sentenceCache[key]) {
     renderExamples(sentenceCache[key]);
@@ -230,7 +283,7 @@ function toggleExamples() {
 
 async function loadExamples() {
   const card  = deck[index];
-  const key   = getCardKey(card);
+  const ckey  = getCardKey(card);
   const btn   = document.getElementById('btnExamples');
   const panel = document.getElementById('examplesPanel');
 
@@ -238,25 +291,56 @@ async function loadExamples() {
   btn.textContent = '⏳ Loading…';
 
   try {
-    const health = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(3000) });
-    if (!health.ok) throw new Error('API server not responding');
+    // ── 1. Try local server first ──────────────────────────────
+    let localOk = false;
+    try {
+      const h = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(2000) });
+      localOk = h.ok;
+    } catch { localOk = false; }
 
-    const res = await fetch(`${API_URL}/sentences`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ zh: card.zh, en: card.en, pinyin: card.pinyin }),
-    });
+    let sentences;
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+    if (localOk) {
+      const res  = await fetch(`${API_URL}/sentences`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ zh: card.zh, en: card.en, pinyin: card.pinyin }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Server error ${res.status}`);
+      sentences = data.sentences;
 
-    sentenceCache[key] = data.sentences;
+    } else {
+      // ── 2. Fall back to direct Anthropic API ─────────────────
+      let apiKey = getStoredApiKey();
+      if (!apiKey) {
+        // First time on mobile — ask for key
+        btn.disabled    = false;
+        btn.textContent = '💬 Example Sentences';
+        showApiKeyModal(() => loadExamples());
+        return;
+      }
+      sentences = await generateSentencesDirect(card, apiKey);
+    }
+
+    sentenceCache[ckey] = sentences;
     localStorage.setItem('sentenceCache', JSON.stringify(sentenceCache));
-    renderExamples(data.sentences);
+    renderExamples(sentences);
 
   } catch (err) {
-    panel.innerHTML = `<div class="examples-error">⚠ ${err.message}</div>`;
-    panel.classList.add('open');
+    // If key is invalid, clear it and re-prompt
+    if (err.status === 401 || /invalid.*key|authentication/i.test(err.message)) {
+      localStorage.removeItem('anthropicApiKey');
+      panel.innerHTML = `<div class="examples-error">⚠ API key invalid — please re-enter it.</div>`;
+      panel.classList.add('open');
+      setTimeout(() => showApiKeyModal(() => {
+        panel.innerHTML = ''; panel.classList.remove('open');
+        loadExamples();
+      }), 1200);
+    } else {
+      panel.innerHTML = `<div class="examples-error">⚠ ${err.message}</div>`;
+      panel.classList.add('open');
+    }
     btn.disabled    = false;
     btn.textContent = '💬 Example Sentences';
   }
@@ -283,6 +367,34 @@ function resetExamples() {
   const btn    = document.getElementById('btnExamples');
   if (panel) { panel.innerHTML = ''; panel.classList.remove('open'); }
   if (btn)   { btn.textContent = '💬 Example Sentences'; btn.disabled = false; }
+}
+
+// ── API key modal (mobile / GitHub Pages setup) ────────────────
+
+let _apiKeyCallback = null;
+
+function showApiKeyModal(onSaved) {
+  _apiKeyCallback = onSaved || null;
+  const el = document.getElementById('apiKeyModal');
+  if (el) {
+    document.getElementById('apiKeyInput').value = getStoredApiKey();
+    el.style.display = 'flex';
+    document.getElementById('apiKeyInput').focus();
+  }
+}
+
+function closeApiKeyModal() {
+  const el = document.getElementById('apiKeyModal');
+  if (el) el.style.display = 'none';
+  _apiKeyCallback = null;
+}
+
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val) return;
+  setStoredApiKey(val);
+  closeApiKeyModal();
+  if (_apiKeyCallback) _apiKeyCallback();
 }
 
 // ── Language direction toggle ──────────────────────────────────

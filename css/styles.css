@@ -24,19 +24,16 @@
 }
 .lang-toggle-btn.zh-first:hover { border-color: #c8956c; color: #c8956c; }
 
-/* ── Progress widget (top-right) ───────────────────────────── */
+/* ── Progress widget (bottom of page) ──────────────────────── */
 .progress-widget {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  background: rgba(15, 30, 61, 0.95);
+  width: 100%;
+  max-width: 480px;
+  background: #16213e;
   border: 1px solid #2a4a7f;
   border-radius: 14px;
-  padding: 12px 14px;
-  width: 210px;
-  z-index: 200;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  padding: 14px 16px;
+  margin-top: 28px;
+  margin-bottom: 12px;
 }
 
 .pw-title {
@@ -70,16 +67,16 @@
 .pw-seg-unseen     { background: #1e3050; }
 
 .pw-legend {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
 }
 
 .pw-item {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
 }
 
 .pw-dot {
@@ -89,8 +86,8 @@
   flex-shrink: 0;
 }
 
-.pw-label { color: #667; flex: 1; }
-.pw-count { color: #ccc; font-weight: 700; }
+.pw-label { color: #667; }
+.pw-count { color: #ccc; font-weight: 700; margin-left: 2px; }
 
 /* ── Reset & base ──────────────────────────────────────────── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -378,16 +375,86 @@ h1 {
   margin-bottom: 4px;
 }
 
+.examples-header-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
 .btn-examples {
   background: #16213e;
   color: #7ab3e8;
   border: 1px solid #2a4a7f;
   font-size: 0.82rem;
-  width: 100%;
+  flex: 1;
   letter-spacing: 0.3px;
 }
 .btn-examples:hover:not(:disabled) { background: #1e3a6e; border-color: #5eb8e8; }
 .btn-examples:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-api-key {
+  background: #16213e;
+  color: #556;
+  border: 1px solid #2a4a7f;
+  font-size: 1rem;
+  padding: 8px 12px;
+  flex-shrink: 0;
+}
+.btn-api-key:hover { background: #1e3a6e; color: #7ab3e8; }
+
+/* ── API key modal ──────────────────────────────────────────── */
+.api-key-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+
+.api-key-dialog {
+  background: #16213e;
+  border: 1px solid #2a4a7f;
+  border-radius: 16px;
+  padding: 24px 22px;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+}
+
+.api-key-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e8d5b7;
+  letter-spacing: 0.3px;
+}
+
+.api-key-desc {
+  font-size: 0.78rem;
+  color: #778;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.api-key-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.api-key-hint {
+  font-size: 0.72rem;
+  color: #556;
+  text-align: center;
+  margin: 0;
+}
+.api-key-hint a { color: #7ab3e8; text-decoration: none; }
+.api-key-hint a:hover { text-decoration: underline; }
 
 .examples-panel {
   display: none;

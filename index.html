@@ -7,7 +7,7 @@
   <meta name="description" content="Chinese language flashcard app with English translations" />
   <title>中文 Flashcards</title>
 
-  <link rel="stylesheet" href="css/styles.css?v=5" />
+  <link rel="stylesheet" href="css/styles.css?v=7" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 </head>
@@ -15,39 +15,6 @@
 
 <!-- Language direction toggle (top-left) -->
 <button class="lang-toggle-btn" id="btnLangToggle" onclick="toggleFrontLang()" title="Switch card direction">EN → 中</button>
-
-<!-- Progress widget (top-right) -->
-<div class="progress-widget" id="progressWidget">
-  <div class="pw-title">Overall Progress</div>
-  <div class="pw-bar">
-    <div class="pw-seg pw-seg-known"      id="pwSegKnown"      style="width:0%"></div>
-    <div class="pw-seg pw-seg-practice"   id="pwSegPractice"   style="width:0%"></div>
-    <div class="pw-seg pw-seg-struggling" id="pwSegStruggling" style="width:0%"></div>
-    <div class="pw-seg pw-seg-unseen"     id="pwSegUnseen"     style="width:100%"></div>
-  </div>
-  <div class="pw-legend">
-    <div class="pw-item">
-      <span class="pw-dot" style="background:#4caf50"></span>
-      <span class="pw-label">Known</span>
-      <span class="pw-count" id="pwCountKnown">0</span>
-    </div>
-    <div class="pw-item">
-      <span class="pw-dot" style="background:#f0a500"></span>
-      <span class="pw-label">Practice</span>
-      <span class="pw-count" id="pwCountPractice">0</span>
-    </div>
-    <div class="pw-item">
-      <span class="pw-dot" style="background:#ef5350"></span>
-      <span class="pw-label">Struggling</span>
-      <span class="pw-count" id="pwCountStruggling">0</span>
-    </div>
-    <div class="pw-item">
-      <span class="pw-dot" style="background:#334466"></span>
-      <span class="pw-label">Unseen</span>
-      <span class="pw-count" id="pwCountUnseen">0</span>
-    </div>
-  </div>
-</div>
 
 <h1>中文 Flashcards</h1>
 <p class="subtitle">Click a card to reveal the translation</p>
@@ -105,8 +72,27 @@
 
 <!-- Example sentences (shown when card is flipped) -->
 <div class="examples-wrap" id="examplesWrap" style="display:none;">
-  <button class="btn btn-examples" id="btnExamples" onclick="toggleExamples()">💬 Example Sentences</button>
+  <div class="examples-header-row">
+    <button class="btn btn-examples" id="btnExamples" onclick="toggleExamples()">💬 Example Sentences</button>
+    <button class="btn btn-api-key" onclick="showApiKeyModal()" title="Set API key for mobile use">⚙</button>
+  </div>
   <div class="examples-panel" id="examplesPanel"></div>
+</div>
+
+<!-- API key modal (first-time mobile setup) -->
+<div class="api-key-modal" id="apiKeyModal" style="display:none;" onclick="if(event.target===this)closeApiKeyModal()">
+  <div class="api-key-dialog">
+    <div class="api-key-title">🔑 Anthropic API Key</div>
+    <p class="api-key-desc">Enter your key to generate example sentences on this device. It's saved locally and never uploaded anywhere.</p>
+    <input class="import-input" id="apiKeyInput" type="password"
+      placeholder="sk-ant-api03-..."
+      onkeydown="if(event.key==='Enter')saveApiKey()" />
+    <div class="api-key-actions">
+      <button class="btn btn-import" onclick="saveApiKey()">Save Key</button>
+      <button class="btn btn-clear-import" onclick="closeApiKeyModal()">Cancel</button>
+    </div>
+    <p class="api-key-hint">Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+  </div>
 </div>
 
 <div class="study-controls">
@@ -118,6 +104,39 @@
   <span>Total: <strong id="statTotal">0</strong></span>
   <span class="stat-known">Known: <strong id="statKnown">0</strong></span>
   <span class="stat-unknown">Learning: <strong id="statUnknown">0</strong></span>
+</div>
+
+<!-- Progress widget (bottom of page) -->
+<div class="progress-widget" id="progressWidget">
+  <div class="pw-title">Overall Progress</div>
+  <div class="pw-bar">
+    <div class="pw-seg pw-seg-known"      id="pwSegKnown"      style="width:0%"></div>
+    <div class="pw-seg pw-seg-practice"   id="pwSegPractice"   style="width:0%"></div>
+    <div class="pw-seg pw-seg-struggling" id="pwSegStruggling" style="width:0%"></div>
+    <div class="pw-seg pw-seg-unseen"     id="pwSegUnseen"     style="width:100%"></div>
+  </div>
+  <div class="pw-legend">
+    <div class="pw-item">
+      <span class="pw-dot" style="background:#4caf50"></span>
+      <span class="pw-label">Known</span>
+      <span class="pw-count" id="pwCountKnown">0</span>
+    </div>
+    <div class="pw-item">
+      <span class="pw-dot" style="background:#f0a500"></span>
+      <span class="pw-label">Practice</span>
+      <span class="pw-count" id="pwCountPractice">0</span>
+    </div>
+    <div class="pw-item">
+      <span class="pw-dot" style="background:#ef5350"></span>
+      <span class="pw-label">Struggling</span>
+      <span class="pw-count" id="pwCountStruggling">0</span>
+    </div>
+    <div class="pw-item">
+      <span class="pw-dot" style="background:#334466"></span>
+      <span class="pw-label">Unseen</span>
+      <span class="pw-count" id="pwCountUnseen">0</span>
+    </div>
+  </div>
 </div>
 
 <!-- Import toolbar -->
