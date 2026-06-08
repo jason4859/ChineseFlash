@@ -46,7 +46,7 @@ def _load_env_file():
             key, _, val = line.partition('=')
             key = key.strip()
             val = val.strip().strip('"\'')
-            if key and key not in os.environ:   # env var takes priority over .env
+            if key and not os.environ.get(key):   # overwrite missing OR empty env vars
                 os.environ[key] = val
 
 _load_env_file()
