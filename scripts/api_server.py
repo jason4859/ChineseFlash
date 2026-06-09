@@ -210,7 +210,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split('?')[0]
-        if path not in ('/extract', '/sentences'):
+        if path not in ('/extract', '/sentences', '/save-user-cards'):
             self.send_json(404, {'error': 'Not found'})
             return
 
@@ -240,6 +240,23 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(500, {'error': str(e)})
             except Exception as e:
                 self.send_json(500, {'error': f'Unexpected error: {e}'})
+            return
+
+        # ── /save-user-cards ──────────────────────────────────────
+        if path == '/save-user-cards':
+            cards = body.get('cards', [])
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            out_path = os.path.join(project_root, 'js', 'user-cards.js')
+            lines = [
+                '// user-cards.js — Auto-generated user vocabulary',
+                '// Commit and push this file to sync your cards to GitHub Pages.',
+                f'const USER_CARDS = {json.dumps(cards, ensure_ascii=False, indent=2)};',
+                '',
+            ]
+            with open(out_path, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(lines))
+            print(f'  Saved {len(cards)} user cards to js/user-cards.js')
+            self.send_json(200, {'saved': len(cards)})
             return
 
         # ── /extract ──────────────────────────────────────────────

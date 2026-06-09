@@ -472,10 +472,19 @@ function toggleFrontLang() {
  * localStorage, deduplicating on zh + cat.
  */
 function loadAllCards() {
+  // Cards from user-cards.js (committed to repo — works on GitHub Pages)
+  const fileCards = (typeof USER_CARDS !== 'undefined' && Array.isArray(USER_CARDS))
+    ? USER_CARDS : [];
+  // Cards from localStorage (added on this device)
   let saved = [];
   try { saved = JSON.parse(localStorage.getItem('flashcards') || '[]'); } catch {}
+
   const seen   = new Set(SEED_CARDS.map(c => c.zh + c.cat));
-  const extras = saved.filter(c => !seen.has(c.zh + c.cat));
+  const extras = [];
+  for (const c of [...fileCards, ...saved]) {
+    const k = c.zh + c.cat;
+    if (!seen.has(k)) { extras.push(c); seen.add(k); }
+  }
   return [...SEED_CARDS, ...extras];
 }
 
@@ -485,6 +494,24 @@ function saveExtraCards() {
     c => !SEED_CARDS.some(s => s.zh === c.zh && s.cat === c.cat)
   );
   localStorage.setItem('flashcards', JSON.stringify(extras));
+  // Also write to js/user-cards.js via API server so the file can be pushed to GitHub
+  syncUserCardsToFile(extras);
+}
+
+/**
+ * POST user cards to the local API server, which writes js/user-cards.js.
+ * Silently skips if the server isn't running (e.g. on mobile).
+ */
+async function syncUserCardsToFile(extras) {
+  try {
+    const health = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(1000) });
+    if (!health.ok) return;
+    await fetch(`${API_URL}/save-user-cards`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ cards: extras }),
+    });
+  } catch { /* server not available — skip silently */ }
 }
 
 // ── Categories ────────────────────────────────────────────────
